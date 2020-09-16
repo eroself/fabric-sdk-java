@@ -16,6 +16,7 @@
 
 package org.hyperledger.fabric.sdk;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,15 +27,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import io.netty.util.internal.ConcurrentSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hyperledger.fabric.protos.discovery.Protocol;
@@ -66,6 +68,7 @@ public class ServiceDiscovery {
     private final TransactionContext transactionContext;
     private final String channelName;
     private volatile Map<String, SDChaindcode> chaindcodeMap = new HashMap<>();
+    private static final boolean asLocalhost = config.discoverAsLocalhost();
 
     ServiceDiscovery(Channel channel, Collection<Peer> serviceDiscoveryPeers, TransactionContext transactionContext) {
         this.serviceDiscoveryPeers = serviceDiscoveryPeers;
@@ -202,7 +205,7 @@ public class ServiceDiscovery {
 
     private volatile SDNetwork sdNetwork = null;
 
-    private final ConcurrentSet<ByteString> certs = new ConcurrentSet<>();
+    private final Set<ByteString> certs = ConcurrentHashMap.newKeySet();
 
     SDNetwork networkDiscovery(TransactionContext ltransactionContext, boolean force) {
         logger.trace(format("Network discovery force: %b", force));
@@ -218,6 +221,10 @@ public class ServiceDiscovery {
 
         for (final Peer serviceDiscoveryPeer : speers) {
             try {
+                URI serviceDiscoveryPeerURI = URI.create(serviceDiscoveryPeer.getUrl());
+                boolean isTLS = serviceDiscoveryPeerURI.getScheme().equals("grpcs");
+                logger.trace(format("Service discovery peer %s using TLS: %b", serviceDiscoveryPeerURI.toString(), isTLS));
+
                 SDNetwork lsdNetwork = new SDNetwork();
                 final byte[] clientTLSCertificateDigest = serviceDiscoveryPeer.getClientTLSCertificateDigest();
 
@@ -305,7 +312,8 @@ public class ServiceDiscovery {
                     Protocol.Endpoints value = i.getValue();
                     for (Protocol.Endpoint l : value.getEndpointList()) {
                         logger.trace(format("Channel: %s peer: %s discovered orderer MSPID: %s, endpoint: %s:%s", channelName, serviceDiscoveryPeer, mspid, l.getHost(), l.getPort()));
-                        String endpoint = (l.getHost() + ":" + l.getPort()).trim().toLowerCase();
+                        String host = asLocalhost ? "localhost" : l.getHost();
+                        String endpoint = (host + ":" + l.getPort()).trim().toLowerCase();
 
                         SDOrderer discoveredAlready = ordererEndpoints.get(endpoint);
                         if (discoveredAlready != null) {
@@ -317,7 +325,12 @@ public class ServiceDiscovery {
                             continue;
                         }
 
-                        final SDOrderer sdOrderer = new SDOrderer(mspid, endpoint, lsdNetwork.getTlsCerts(mspid), lsdNetwork.getTlsIntermediateCerts(mspid));
+                        Properties properties = new Properties();
+                        if (asLocalhost) {
+                            properties.put("hostnameOverride", l.getHost());
+                        }
+
+                        final SDOrderer sdOrderer = new SDOrderer(mspid, endpoint, lsdNetwork.getTlsCerts(mspid), lsdNetwork.getTlsIntermediateCerts(mspid), properties, isTLS);
 
                         ordererEndpoints.put(sdOrderer.getEndPoint(), sdOrderer);
                     }
@@ -333,7 +346,7 @@ public class ServiceDiscovery {
                     final Protocol.Peers peer = peers.getValue();
 
                     for (Protocol.Peer pp : peer.getPeersList()) {
-                        SDEndorser ppp = new SDEndorser(pp, lsdNetwork.getTlsCerts(mspId), lsdNetwork.getTlsIntermediateCerts(mspId));
+                        SDEndorser ppp = new SDEndorser(pp, lsdNetwork.getTlsCerts(mspId), lsdNetwork.getTlsIntermediateCerts(mspId), asLocalhost, isTLS);
 
                         SDEndorser discoveredAlready = lsdNetwork.endorsers.get(ppp.getEndpoint());
                         if (null != discoveredAlready) {
@@ -370,12 +383,16 @@ public class ServiceDiscovery {
         private final Collection<byte[]> tlsCerts;
         private final Collection<byte[]> tlsIntermediateCerts;
         private final String endPoint;
+        private final Properties properties;
+        private final boolean tls;
 
-        SDOrderer(String mspid, String endPoint, Collection<byte[]> tlsCerts, Collection<byte[]> tlsIntermediateCerts) {
+        SDOrderer(String mspid, String endPoint, Collection<byte[]> tlsCerts, Collection<byte[]> tlsIntermediateCerts, Properties properties, boolean tls) {
             this.mspid = mspid;
             this.endPoint = endPoint;
             this.tlsCerts = tlsCerts;
             this.tlsIntermediateCerts = tlsIntermediateCerts;
+            this.properties = properties;
+            this.tls = tls;
         }
 
         public Collection<byte[]> getTlsIntermediateCerts() {
@@ -392,6 +409,14 @@ public class ServiceDiscovery {
 
         public Collection<byte[]> getTlsCerts() {
             return tlsCerts;
+        }
+
+        public Properties getProperties() {
+            return properties;
+        }
+
+        public boolean isTLS() {
+            return tls;
         }
     }
 
@@ -427,6 +452,10 @@ public class ServiceDiscovery {
         for (Peer serviceDiscoveryPeer : speers) {
             serviceDiscoveryException = null;
             try {
+                URI serviceDiscoveryPeerURI = URI.create(serviceDiscoveryPeer.getUrl());
+                boolean isTLS = serviceDiscoveryPeerURI.getScheme().equals("grpcs");
+                logger.trace(format("Service discovery peer %s using TLS: %b", serviceDiscoveryPeerURI.toString(), isTLS));
+
                 logger.debug(format("Channel %s doing discovery for chaincodes on peer: %s", channelName, serviceDiscoveryPeer.toString()));
 
                 TransactionContext ltransactionContext = transactionContext.retryTransactionSameContext();
@@ -520,7 +549,7 @@ public class ServiceDiscovery {
                                 List<SDEndorser> sdEndorsers = new LinkedList<>();
 
                                 for (Protocol.Peer pp : peers.getPeersList()) {
-                                    SDEndorser ppp = new SDEndorser(pp, null, null);
+                                    SDEndorser ppp = new SDEndorser(pp, null, null, asLocalhost, isTLS);
                                     final String endPoint = ppp.getEndpoint();
                                     SDEndorser nppp = sdNetwork.getEndorserByEndpoint(endPoint);
                                     if (null == nppp) {
@@ -1096,19 +1125,26 @@ public class ServiceDiscovery {
         private List<Message.Chaincode> chaincodesList;
         // private final Protocol.Peer proto;
         private String endPoint = null;
+        private String name = null;
         private String mspid;
         private long ledgerHeight = -1L;
         private final Collection<byte[]> tlsCerts;
         private final Collection<byte[]> tlsIntermediateCerts;
+        private final boolean asLocalhost;
+        private final boolean tls;
 
         SDEndorser() { // for testing only
             tlsCerts = null;
             tlsIntermediateCerts = null;
+            asLocalhost = false;
+            tls = false;
         }
 
-        SDEndorser(Protocol.Peer peerRet, Collection<byte[]> tlsCerts, Collection<byte[]> tlsIntermediateCerts) {
+        SDEndorser(Protocol.Peer peerRet, Collection<byte[]> tlsCerts, Collection<byte[]> tlsIntermediateCerts, boolean asLocalhost, boolean tls) {
             this.tlsCerts = tlsCerts;
             this.tlsIntermediateCerts = tlsIntermediateCerts;
+            this.asLocalhost = asLocalhost;
+            this.tls = tls;
 
             parseEndpoint(peerRet);
             parseLedgerHeight(peerRet);
@@ -1121,6 +1157,10 @@ public class ServiceDiscovery {
 
         Collection<byte[]> getTLSIntermediateCerts() {
             return tlsIntermediateCerts;
+        }
+
+        public String getName() {
+            return name;
         }
 
         public String getEndpoint() {
@@ -1151,9 +1191,13 @@ public class ServiceDiscovery {
                         throw new RuntimeException(format("Error %s", "bad"));
                     }
                     Message.AliveMessage aliveMsg = gossipMessageMemberInfo.getAliveMsg();
-                    endPoint = aliveMsg.getMembership().getEndpoint();
-                    if (endPoint != null) {
-                        endPoint = endPoint.toLowerCase().trim(); //makes easier on comparing.
+                    name = aliveMsg.getMembership().getEndpoint();
+                    if (name != null) {
+                        if (asLocalhost) {
+                            endPoint = "localhost" + name.substring(name.lastIndexOf(':'));
+                        } else {
+                            endPoint = name.toLowerCase().trim(); //makes easier on comparing.
+                        }
                     }
                 } catch (InvalidProtocolBufferException e) {
                     throw new InvalidProtocolBufferRuntimeException(e);
@@ -1214,6 +1258,10 @@ public class ServiceDiscovery {
 
         public String getMspid() {
             return mspid;
+        }
+
+        public boolean isTLS() {
+            return this.tls;
         }
 
         @Override

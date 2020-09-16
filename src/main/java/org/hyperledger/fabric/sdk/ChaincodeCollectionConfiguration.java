@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
@@ -36,14 +35,15 @@ import javax.json.JsonValue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hyperledger.fabric.protos.common.Collection;
 import org.hyperledger.fabric.protos.common.MspPrincipal.MSPPrincipal;
 import org.hyperledger.fabric.protos.common.MspPrincipal.MSPRole;
 import org.hyperledger.fabric.protos.common.Policies;
 import org.hyperledger.fabric.protos.common.Policies.SignaturePolicy;
+import org.hyperledger.fabric.protos.peer.Collection;
 import org.hyperledger.fabric.sdk.exception.ChaincodeCollectionConfigurationException;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import static java.lang.String.format;
 
@@ -55,7 +55,7 @@ public class ChaincodeCollectionConfiguration {
         return collectionConfigPackage;
     }
 
-    private Collection.CollectionConfigPackage collectionConfigPackage = null;
+    private final Collection.CollectionConfigPackage collectionConfigPackage;
 
     ChaincodeCollectionConfiguration(JsonArray jsonConfig) throws ChaincodeCollectionConfigurationException {
 
@@ -117,7 +117,7 @@ public class ChaincodeCollectionConfiguration {
             throw new InvalidArgumentException("ConfigStream must be specified");
         }
 
-        Yaml yaml = new Yaml();
+        Yaml yaml = new Yaml(new SafeConstructor());
 
         List<Object> map = yaml.load(configStream);
 

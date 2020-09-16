@@ -34,6 +34,7 @@ import org.hyperledger.fabric.protos.common.Policies;
 import org.hyperledger.fabric.protos.common.Policies.SignaturePolicy;
 import org.hyperledger.fabric.sdk.exception.ChaincodeEndorsementPolicyParseException;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import static java.lang.String.format;
 
@@ -235,9 +236,9 @@ public class ChaincodeEndorsementPolicy {
      * @throws ChaincodeEndorsementPolicyParseException
      * @deprecated use {@link #fromYamlFile(Path)}
      */
-
+    @Deprecated
     public void fromYamlFile(File yamlPolicyFile) throws IOException, ChaincodeEndorsementPolicyParseException {
-        final Yaml yaml = new Yaml();
+        final Yaml yaml = new Yaml(new SafeConstructor());
         final Map<?, ?> load = (Map<?, ?>) yaml.load(new FileInputStream(yamlPolicyFile));
 
         Map<?, ?> mp = (Map<?, ?>) load.get("policy");
@@ -258,7 +259,7 @@ public class ChaincodeEndorsementPolicy {
     }
 
     public static ChaincodeEndorsementPolicy fromYamlFile(Path yamlPolicyFile) throws IOException, ChaincodeEndorsementPolicyParseException {
-        final Yaml yaml = new Yaml();
+        final Yaml yaml = new Yaml(new SafeConstructor());
         final Map<?, ?> load = (Map<?, ?>) yaml.load(new FileInputStream(yamlPolicyFile.toFile()));
 
         Map<?, ?> mp = (Map<?, ?>) load.get("policy");

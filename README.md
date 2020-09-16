@@ -1,13 +1,37 @@
-# Java SDK for Hyperledger Fabric 2.0 pre-release.
-Welcome to Java SDK for Hyperledger project. The SDK helps facilitate Java applications to manage the lifecycle of
- Hyperledger channels  and user chaincode. The SDK also provides a means to execute
-  user chaincode, query blocks
- and transactions on the channel, and monitor events on the channel.
+# Hyperledger Fabric SDK for Java
 
-The SDK acts on behave of a particular User which is defined by the embedding application through the implementation
- of the SDK's `User` interface.
+<div style="float: right">
+<table align="right">
+  <tr><th>Branch</th><th>Build status</th></tr>
+  <tr><td>master</td><td><a href="https://dev.azure.com/Hyperledger/Fabric-SDK-Java/_build/latest?definitionId=36&branchName=master"><img src="https://dev.azure.com/Hyperledger/Fabric-SDK-Java/_apis/build/status/Fabric-SDK-Java?branchName=master"></a></td></tr>
+  <tr><td>release-2.2</td><td><a href="https://dev.azure.com/Hyperledger/Fabric-SDK-Java/_build/latest?definitionId=36&branchName=release-2.2"><img src="https://dev.azure.com/Hyperledger/Fabric-SDK-Java/_apis/build/status/Fabric-SDK-Java?branchName=release-2.2"></a></td></tr>
+  <tr><td>release-1.4</td><td><a href="https://dev.azure.com/Hyperledger/Fabric-SDK-Java/_build/latest?definitionId=36&branchName=release-1.4"><img src="https://dev.azure.com/Hyperledger/Fabric-SDK-Java/_apis/build/status/Fabric-SDK-Java?branchName=release-1.4"></a></td></tr>
+</table>
+</div>
 
-Note, the SDK does ***not*** provide a means of persistence
+[![Build Status](https://dev.azure.com/Hyperledger/Fabric-SDK-Java/_apis/build/status/Fabric-SDK-Java?branchName=release-2.2)](https://dev.azure.com/Hyperledger/Fabric-SDK-Java/_build/latest?definitionId=36&branchName=release-2.2)
+This project provides a low-level API for interacting with Hyperledger Fabric blockchain networks, and is used by the
+high-level **Hyperledger Fabric Gateway SDK for Java**:
+- Documentation: https://hyperledger.github.io/fabric-gateway-java/
+- GitHub repository: https://github.com/hyperledger/fabric-gateway-java/
+ 
+For building Hyperledger Fabric blockchain client applications, you are strongly encouraged to use the high level API.
+
+The information below is intended for contributors to this repository.
+
+---
+
+## Introduction for contributors
+
+The SDK provides a layer of abstraction on top of the wire-level protobuf based communication protocol used by client
+applications to interact with a Hyperledger Fabric blockchain network. It allows Java applications to manage the
+lifecycle of Hyperledger channels and user chaincode. The SDK also provides a means to execute user chaincode, query
+blocks and transactions on the channel, and monitor events on the channel.
+
+The SDK acts on behalf of a particular User which is defined by the embedding application through the implementation
+of the SDK's `User` interface.
+
+Note, the SDK does **not** provide a means of persistence
   for the application defined channels and user artifacts on the client. This is left for the embedding application to best manage.
   Channels may be serialized via Java serialization in the context of a client.
   Channels deserialized are not in an initialized state.
@@ -26,6 +50,7 @@ SDK's `Enrollment` interface.
 
 |Release | Notes |Summary|
 |--------|:------|:------|
+|2.1     | [v2.1 release notes](./release_notes/v2.1.0.txt)| Minor update |
 |2.0     | [v2.0 release notes](./docs/release_v2.0.0_notes.md) | <ul><li>New lifecycle chaincode management</li><li>Connection config handlers</li><li>Application setting executor service</li><li>Queued block listener</li></ul>   |
 |1.4     | None | Minor updates no Fabric changes|
 |1.3     | [v1.3 release notes](./docs/release_v1.3.0_notes.md)|<ul><li>Java chaincode support</li><li>Query chaincode collection configuration</li><li>Identity Mixer transaction unlinkabilty support</li></ul> |
@@ -47,7 +72,7 @@ For Java applications use the latest <b>released</b> version of the SDK v1.4.x r
      <dependency>
          <groupId>org.hyperledger.fabric-sdk-java</groupId>
          <artifactId>fabric-sdk-java</artifactId>
-         <version>1.4.1</version>
+         <version>1.4.7</version>
      </dependency>
 
 ```
@@ -82,31 +107,21 @@ pom.xml
 ```
 
 ### Java and Node Chaincode environment
-You may also need to on your <span style="color:red"><b>v2.0</b> </span>  Fabric network docker deployment explicitly pull the Java and Node chaincode environments for now.
+You may also need to on your <span style="color:red"><b>v2.1</b> </span>  Fabric network docker deployment explicitly pull the Java and Node chaincode environments for now.
 
-`docker pull nexus3.hyperledger.org:10001/hyperledger/fabric-nodeenv:amd64-2.0.0-stable&&docker tag nexus3.hyperledger.org:10001/hyperledger/fabric-nodeenv:amd64-2.0.0-stable hyperledger/fabric-nodeenv:amd64-latest&&docker tag nexus3.hyperledger.org:10001/hyperledger/fabric-nodeenv:amd64-2.0.0-stable hyperledger/fabric-nodeenv`
+`docker pull hyperledger-fabric.jfrog.io/fabric-nodeenv:amd64-2.1.0-stable&&docker tag hyperledger-fabric.jfrog.io/fabric-nodeenv:amd64-2.1.0-stable hyperledger/fabric-nodeenv:amd64-latest&&docker tag hyperledger-fabric.jfrog.io/fabric-nodeenv:amd64-2.1.0-stable hyperledger/fabric-nodeenv`
 
-`docker pull nexus3.hyperledger.org:10001/hyperledger/fabric-javaenv:amd64-2.0.0-stable&&docker tag nexus3.hyperledger.org:10001/hyperledger/fabric-javaenv:amd64-2.0.0-stable hyperledger/fabric-javaenv:amd64-latest&&docker tag nexus3.hyperledger.org:10001/hyperledger/fabric-javaenv:amd64-2.0.0-stable hyperledger/fabric-javaenv`
+`docker pull hyperledger-fabric.jfrog.io/fabric-javaenv:amd64-2.1.0-stable&&docker tag hyperledger-fabric.jfrog.io/fabric-javaenv:amd64-2.1.0-stable hyperledger/fabric-javaenv:amd64-latest&&docker tag hyperledger-fabric.jfrog.io/fabric-javaenv:amd64-2.1.0-stable hyperledger/fabric-javaenv`
 
 ## Known limitations and restrictions
 
 * TCerts are not supported: JIRA FAB-1401
-* HSM not supported. JIRA FAB-3137
 
-<p &nbsp; />
-<p &nbsp; />
+---
 
+## v2.1 builds of Fabric and Fabric-ca needed for the integration test
 
-`*************************************************`
-
-
-## Latest Fabric Builds.
-Latest Fabric builds are seldom needed except for those working on the very latest Fabric features.
-Some information to help with that can been found in [Developer Instructions](./docs/DeveloperInstructions.md)
-
-## v2.0 builds of Fabric and Fabric-ca needed for the integration test
-
-To get a functioning Fabric v2.0 network needed by the SDK Integration tests.
+To get a functioning Fabric v2.1 network needed by the SDK Integration tests.
 In the directory `src/test/fixture/sdkintegration` issue :
 
 `./fabric.sh restart`
@@ -225,7 +240,6 @@ Then run the Integration tests with:
 ORG_HYPERLEDGER_FABRIC_SDKTEST_INTEGRATIONTESTS_TLS=true mvn clean install -DskipITs=false -Dmaven.test.failure.ignore=false javadoc:javadoc
 
 ### Chaincode endorsement policies
-Policies are described in the [Fabric Endorsement Policies document](https://gerrit.hyperledger.org/r/gitweb?p=fabric.git;a=blob;f=docs/endorsement-policies.md;h=1eecf359c12c3f7c1ddc63759a0b5f3141b07f13;hb=HEAD).
 You create a policy using a Fabric tool ( an example is shown in [JIRA issue FAB-2376](https://jira.hyperledger.org/browse/FAB-2376?focusedCommentId=21121&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-21121))
 and give it to the SDK either as a file or a byte array. The SDK, in turn, will use the policy when it creates chaincode instantiation requests.
 
@@ -276,7 +290,7 @@ and execute the following commands:
  * configtxgen --configPath . -outputCreateChannelTx foo.tx -profile TwoOrgsChannel_v13 -channelID foo
  * configtxgen --configPath . -outputCreateChannelTx bar.tx -profile TwoOrgsChannel_v13 -channelID bar
 
-For v2.0 integration, cd to the `src/test/fixture/sdkintegration/e2e-2Orgs/v2.0` directory
+For v2.1 integration, cd to the `src/test/fixture/sdkintegration/e2e-2Orgs/v2.1` directory
  * configtxgen --configPath . -outputCreateChannelTx v2channel.tx -profile TwoOrgsChannel_v20 -channelID v2channel
  * configtxgen --configPath . -outputBlock orderer.block -profile TwoOrgsOrdererGenesis_v20 -channelID systemordererchannel
 
@@ -297,9 +311,7 @@ Go lang chaincode dependencies must be contained in vendor folder.
 
 ### Where can I find the Javadoc?
 
-Published on [https://sdkjavadocs.github.io/](https://sdkjavadocs.github.io/)
-
-Also look in the [Maven repository](http://central.maven.org/maven2/org/hyperledger/fabric-sdk-java/fabric-sdk-java/)
+Look in the [Maven repository](http://central.maven.org/maven2/org/hyperledger/fabric-sdk-java/fabric-sdk-java/)
 for the release in question there should be a file fabric-sdk-java-_&lt;release&gt;_-javadoc.jar
 
 For SNAPSHOT builds look in [Sonatype repository](https://oss.sonatype.org/content/repositories/snapshots/org/hyperledger/fabric-sdk-java/fabric-sdk-java/)
